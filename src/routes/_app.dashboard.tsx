@@ -1,7 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bookmark, Wind, Flame, Cloud, Heart, Brain, Users, Zap, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import {
+  Send,
+  Sparkles,
+  Bookmark,
+  Wind,
+  Flame,
+  Cloud,
+  Heart,
+  Brain,
+  Users,
+  Zap,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +38,6 @@ import { useVoiceOutput } from "@/hooks/use-voice-output";
 import { SmartMusicPlayer } from "@/components/spotify/SmartMusicPlayer";
 import { CategoryBrowser } from "@/components/spotify/CategoryBrowser";
 
-
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
   head: () => ({ meta: [{ title: "Dashboard — Life Companion" }] }),
@@ -39,14 +53,16 @@ const PLACEHOLDERS = [
 const GREETINGS = (name: string, mood?: string | null) => {
   const m = (mood ?? "").toLowerCase();
   const base: Record<string, string> = {
-    calm:      `Hey ${name} ✨ Your energy feels calm but uninspired. Let's rediscover something beautiful.`,
-    curious:   `Hey ${name} ✨ Your mind seems creatively restless today.`,
-    heavy:     `Hey ${name} — you feel emotionally overloaded today. Maybe you need quiet moments instead of pressure.`,
-    hopeful:   `Hey ${name} ✨ A soft brightness is moving through you. Let's give it somewhere to land.`,
-    restless:  `Hey ${name} — there's a quiet storm under your skin today. Let's translate it into something gentle.`,
-    tender:    `Hey ${name} — you're holding something fragile today. Let's hold it together.`,
+    calm: `Hey ${name} ✨ Your energy feels calm but uninspired. Let's rediscover something beautiful.`,
+    curious: `Hey ${name} ✨ Your mind seems creatively restless today.`,
+    heavy: `Hey ${name} — you feel emotionally overloaded today. Maybe you need quiet moments instead of pressure.`,
+    hopeful: `Hey ${name} ✨ A soft brightness is moving through you. Let's give it somewhere to land.`,
+    restless: `Hey ${name} — there's a quiet storm under your skin today. Let's translate it into something gentle.`,
+    tender: `Hey ${name} — you're holding something fragile today. Let's hold it together.`,
   };
-  return base[m] ?? `Hey ${name} ✨ I sense an unnamed weather inside you. Want to explore it together?`;
+  return (
+    base[m] ?? `Hey ${name} ✨ I sense an unnamed weather inside you. Want to explore it together?`
+  );
 };
 
 type Msg = { id: string; from: "you" | "ai"; text: string };
@@ -80,13 +96,19 @@ function Dashboard() {
     const t = setInterval(() => setPhIdx((i) => (i + 1) % PLACEHOLDERS.length), 4500);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => { scrollerRef.current?.scrollTo({ top: 999999, behavior: "smooth" }); }, [messages, typing]);
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ top: 999999, behavior: "smooth" });
+  }, [messages, typing]);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user!.id)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -97,7 +119,10 @@ function Dashboard() {
   }, [profile]);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "there";
-  const greeting = useMemo(() => GREETINGS(name, profile?.current_mood), [name, profile?.current_mood]);
+  const greeting = useMemo(
+    () => GREETINGS(name, profile?.current_mood),
+    [name, profile?.current_mood],
+  );
 
   // Sync voice transcript → message input
   useEffect(() => {
@@ -110,7 +135,7 @@ function Dashboard() {
       send();
       voice.clear();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voice.listening]);
 
   const send = async (e?: React.FormEvent) => {
@@ -118,25 +143,39 @@ function Dashboard() {
     const text = message.trim();
     if (!text || typing) return;
     const id = crypto.randomUUID();
-    const history = messages.slice(-10).map((m) => ({ role: m.from === "you" ? "user" as const : "assistant" as const, content: m.text }));
+    const history = messages
+      .slice(-10)
+      .map((m) => ({
+        role: m.from === "you" ? ("user" as const) : ("assistant" as const),
+        content: m.text,
+      }));
     setMessages((m) => [...m, { id, from: "you", text }]);
     setMessage("");
     setTyping(true);
     try {
-      const r = await chat({ data: {
-        message: text,
-        history,
-        context: {
-          mood: profile?.current_mood ?? null,
-          recentMoods: logs.slice(0, 5).map((l) => l.mood),
-          recentExperiences: completedList.slice(0, 5).map((c) => c.experience_slug),
+      const r = await chat({
+        data: {
+          message: text,
+          history,
+          context: {
+            mood: profile?.current_mood ?? null,
+            recentMoods: logs.slice(0, 5).map((l) => l.mood),
+            recentExperiences: completedList.slice(0, 5).map((c) => c.experience_slug),
+          },
         },
-      }});
+      });
       setMessages((m) => [...m, { id: crypto.randomUUID(), from: "ai", text: r.reply }]);
       // Speak reply aloud if voice reply is enabled
       if (voiceReplyEnabled && tts.supported) tts.speak(r.reply);
     } catch {
-      setMessages((m) => [...m, { id: crypto.randomUUID(), from: "ai", text: "I'm here — my voice slipped for a breath. Try again?" }]);
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          from: "ai",
+          text: "I'm here — my voice slipped for a breath. Try again?",
+        },
+      ]);
     } finally {
       setTyping(false);
     }
@@ -150,30 +189,47 @@ function Dashboard() {
         <motion.div
           aria-hidden
           className="absolute -top-40 -left-40 h-[420px] w-[420px] rounded-full"
-          style={{ background: "radial-gradient(circle, oklch(0.78 0.16 295 / 0.55), transparent 70%)", filter: "blur(60px)" }}
+          style={{
+            background: "radial-gradient(circle, oklch(0.78 0.16 295 / 0.55), transparent 70%)",
+            filter: "blur(60px)",
+          }}
           animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           aria-hidden
           className="absolute -bottom-40 -right-40 h-[460px] w-[460px] rounded-full"
-          style={{ background: "radial-gradient(circle, oklch(0.82 0.15 200 / 0.5), transparent 70%)", filter: "blur(70px)" }}
+          style={{
+            background: "radial-gradient(circle, oklch(0.82 0.15 200 / 0.5), transparent 70%)",
+            filter: "blur(70px)",
+          }}
           animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.9, 0.5] }}
           transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 2 }}
         />
 
         <div className="relative grid items-center gap-10 md:grid-cols-[280px_1fr]">
           <motion.div
-            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1 }}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.1 }}
             className="mx-auto"
           >
-            <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}>
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            >
               <AICompanionOrb size={260} />
             </motion.div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }}>
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{greetingFor()} · {new Date().toLocaleDateString(undefined, { weekday: "long" })}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.8 }}
+          >
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              {greetingFor()} · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
+            </p>
             <h1 className="mt-3 font-display text-4xl leading-[1.1] md:text-5xl">
               {greeting.split("✨")[0]}
               {greeting.includes("✨") && <span className="text-aurora">✨</span>}
@@ -198,18 +254,28 @@ function Dashboard() {
                           ? "bg-primary/25 border border-primary/40 text-foreground"
                           : "glass border-aurora/20"
                       }`}
-                      style={m.from === "ai" ? { boxShadow: "0 0 30px -10px oklch(0.82 0.15 200 / 0.5)" } : undefined}
+                      style={
+                        m.from === "ai"
+                          ? { boxShadow: "0 0 30px -10px oklch(0.82 0.15 200 / 0.5)" }
+                          : undefined
+                      }
                     >
                       {m.text}
                     </div>
                   </motion.div>
                 ))}
                 {typing && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-start">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex justify-start"
+                  >
                     <div className="glass flex items-center gap-1.5 rounded-2xl px-4 py-3">
                       {[0, 1, 2].map((i) => (
                         <motion.span
-                          key={i} className="h-1.5 w-1.5 rounded-full bg-primary-glow"
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-primary-glow"
                           animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
                           transition={{ duration: 1, repeat: Infinity, delay: i * 0.18 }}
                         />
@@ -232,7 +298,9 @@ function Dashboard() {
                   {!message && (
                     <motion.span
                       key={phIdx}
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 0.6, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 0.6, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.5 }}
                       className="pointer-events-none absolute inset-y-0 left-0 flex items-center text-sm text-muted-foreground"
                     >
@@ -252,7 +320,10 @@ function Dashboard() {
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => { setVoiceReplyEnabled((v) => !v); if (tts.speaking) tts.stop(); }}
+                  onClick={() => {
+                    setVoiceReplyEnabled((v) => !v);
+                    if (tts.speaking) tts.stop();
+                  }}
                   aria-label="Toggle voice reply"
                   className={`grid h-9 w-9 place-items-center rounded-full border transition ${
                     voiceReplyEnabled
@@ -260,7 +331,11 @@ function Dashboard() {
                       : "border-border bg-background/40 text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {voiceReplyEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                  {voiceReplyEnabled ? (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <VolumeX className="h-3.5 w-3.5" />
+                  )}
                 </motion.button>
               )}
 
@@ -269,29 +344,38 @@ function Dashboard() {
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => voice.listening ? voice.stop() : voice.start()}
+                  onClick={() => (voice.listening ? voice.stop() : voice.start())}
                   aria-label={voice.listening ? "Stop listening" : "Speak to the Orb"}
                   className="relative grid h-9 w-9 place-items-center rounded-full border border-border bg-background/40 text-muted-foreground transition hover:text-foreground"
                 >
                   {voice.listening && (
                     <motion.span
                       className="absolute inset-0 rounded-full"
-                      style={{ background: "oklch(0.65 0.22 25 / 0.25)", boxShadow: "0 0 20px oklch(0.65 0.22 25 / 0.6)" }}
+                      style={{
+                        background: "oklch(0.65 0.22 25 / 0.25)",
+                        boxShadow: "0 0 20px oklch(0.65 0.22 25 / 0.6)",
+                      }}
                       animate={{ scale: [1, 1.4, 1], opacity: [0.8, 0.2, 0.8] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     />
                   )}
-                  {voice.listening
-                    ? <MicOff className="relative h-3.5 w-3.5 text-red-400" />
-                    : <Mic className="h-3.5 w-3.5" />}
+                  {voice.listening ? (
+                    <MicOff className="relative h-3.5 w-3.5 text-red-400" />
+                  ) : (
+                    <Mic className="h-3.5 w-3.5" />
+                  )}
                 </motion.button>
               )}
 
               <motion.button
                 type="submit"
-                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground"
-                style={{ boxShadow: "0 0 30px oklch(0.78 0.16 295 / 0.7), 0 0 60px oklch(0.85 0.18 320 / 0.4)" }}
+                style={{
+                  boxShadow:
+                    "0 0 30px oklch(0.78 0.16 295 / 0.7), 0 0 60px oklch(0.85 0.18 320 / 0.4)",
+                }}
               >
                 <Send className="h-4 w-4" />
               </motion.button>
@@ -302,9 +386,12 @@ function Dashboard() {
 
       {/* EMOTIONAL JOURNEY + INSIGHTS */}
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <DailyJourney 
-          user={user} 
-          history={completedList.slice(0, 10).map(c => c.experience_slug).join(", ")}
+        <DailyJourney
+          user={user}
+          history={completedList
+            .slice(0, 10)
+            .map((c) => c.experience_slug)
+            .join(", ")}
         />
         <div className="space-y-4">
           <InsightsPanel
@@ -316,14 +403,19 @@ function Dashboard() {
               creativity: creativity.length,
             }}
             onLogMood={async (m) => {
-              try { await logMood({ mood: m }); toast.success("Held"); } catch (e: any) { toast.error(e.message ?? "Couldn't save"); }
+              try {
+                await logMood({ mood: m });
+                toast.success("Held");
+              } catch (e: any) {
+                toast.error(e.message ?? "Couldn't save");
+              }
             }}
           />
           {/* Conversational music discovery — intent + weather → songs */}
-          <SmartMusicPlayer />
-          
+          <SmartMusicPlayer mood={profile?.current_mood} />
+
           {/* Emotional soundtrack browser — interactive category atmosphere explorer */}
-          <CategoryBrowser />
+          <CategoryBrowser mood={profile?.current_mood} />
         </div>
       </section>
     </div>
@@ -332,41 +424,60 @@ function Dashboard() {
 /* -------------------- Insights Panel -------------------- */
 
 function InsightsPanel({
-  mood, counts, onLogMood,
+  mood,
+  counts,
+  onLogMood,
 }: {
   mood?: string | null;
   counts: { moods: number; journals: number; completed: number; creativity: number };
   onLogMood: (m: string) => void | Promise<void>;
 }) {
   const weatherByMood: Record<string, { label: string; icon: any; tint: string }> = {
-    calm:     { label: "Calm Evening",      icon: Cloud, tint: "oklch(0.82 0.15 200)" },
-    curious:  { label: "Quiet Curiosity",   icon: Sparkles, tint: "oklch(0.85 0.18 320)" },
-    heavy:    { label: "Emotional Fog",     icon: Cloud, tint: "oklch(0.6 0.05 280)" },
-    hopeful:  { label: "Soft Sunrise",      icon: Flame, tint: "oklch(0.82 0.18 50)" },
-    restless: { label: "Inner Wind",        icon: Wind, tint: "oklch(0.78 0.16 295)" },
-    tender:   { label: "Open Sky",          icon: Cloud, tint: "oklch(0.85 0.18 320)" },
+    calm: { label: "Calm Evening", icon: Cloud, tint: "oklch(0.82 0.15 200)" },
+    curious: { label: "Quiet Curiosity", icon: Sparkles, tint: "oklch(0.85 0.18 320)" },
+    heavy: { label: "Emotional Fog", icon: Cloud, tint: "oklch(0.6 0.05 280)" },
+    hopeful: { label: "Soft Sunrise", icon: Flame, tint: "oklch(0.82 0.18 50)" },
+    restless: { label: "Inner Wind", icon: Wind, tint: "oklch(0.78 0.16 295)" },
+    tender: { label: "Open Sky", icon: Cloud, tint: "oklch(0.85 0.18 320)" },
   };
-  const w = weatherByMood[(mood ?? "").toLowerCase()] ?? { label: "Creative Spark", icon: Sparkles, tint: "oklch(0.85 0.18 320)" };
+  const w = weatherByMood[(mood ?? "").toLowerCase()] ?? {
+    label: "Creative Spark",
+    icon: Sparkles,
+    tint: "oklch(0.85 0.18 320)",
+  };
 
   return (
     <motion.aside
-      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35, duration: 0.7 }}
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.35, duration: 0.7 }}
       className="space-y-4"
     >
       {/* Weather */}
       <div className="glass-strong relative overflow-hidden rounded-3xl p-5">
         <motion.div
-          aria-hidden className="absolute -inset-10 opacity-70"
-          style={{ background: `radial-gradient(circle at 30% 30%, color-mix(in oklab, ${w.tint} 55%, transparent), transparent 60%)`, filter: "blur(40px)" }}
-          animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          aria-hidden
+          className="absolute -inset-10 opacity-70"
+          style={{
+            background: `radial-gradient(circle at 30% 30%, color-mix(in oklab, ${w.tint} 55%, transparent), transparent 60%)`,
+            filter: "blur(40px)",
+          }}
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <div className="relative">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Emotional weather</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            Emotional weather
+          </p>
           <div className="mt-3 flex items-center gap-3">
             <motion.span
-              animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              animate={{ rotate: [0, 8, -8, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               className="grid h-12 w-12 place-items-center rounded-full"
-              style={{ background: `color-mix(in oklab, ${w.tint} 22%, transparent)`, boxShadow: `0 0 30px color-mix(in oklab, ${w.tint} 70%, transparent)` }}
+              style={{
+                background: `color-mix(in oklab, ${w.tint} 22%, transparent)`,
+                boxShadow: `0 0 30px color-mix(in oklab, ${w.tint} 70%, transparent)`,
+              }}
             >
               <w.icon className="h-5 w-5" style={{ color: w.tint }} />
             </motion.span>
@@ -383,7 +494,14 @@ function InsightsPanel({
         <div className="flex items-center gap-3">
           <motion.span
             className="grid h-10 w-10 place-items-center rounded-full bg-primary/20"
-            animate={{ scale: [1, 1.15, 1], boxShadow: ["0 0 0 0 oklch(0.78 0.16 295 / 0.6)", "0 0 30px 6px oklch(0.78 0.16 295 / 0.0)", "0 0 0 0 oklch(0.78 0.16 295 / 0)"] }}
+            animate={{
+              scale: [1, 1.15, 1],
+              boxShadow: [
+                "0 0 0 0 oklch(0.78 0.16 295 / 0.6)",
+                "0 0 30px 6px oklch(0.78 0.16 295 / 0.0)",
+                "0 0 0 0 oklch(0.78 0.16 295 / 0)",
+              ],
+            }}
             transition={{ duration: 2.4, repeat: Infinity }}
           >
             <Zap className="h-4 w-4 text-primary-glow" />
