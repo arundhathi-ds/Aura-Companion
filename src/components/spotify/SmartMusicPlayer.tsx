@@ -135,6 +135,13 @@ export function SmartMusicPlayer({ mood }: SmartMusicPlayerProps) {
             }),
           );
 
+          if (mapped.length === 0) {
+            const results = getDynamicSongs(intent, l, weather);
+            setSongs(results);
+            setStep("results");
+            return;
+          }
+
           const fresh = mapped.filter((song) => !MusicMemory.isRecentlyShown(song.searchUrl));
           const finalSongs = fresh.length >= 6 ? fresh.slice(0, 10) : mapped.slice(0, 10);
 
