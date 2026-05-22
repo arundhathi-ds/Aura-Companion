@@ -13,7 +13,6 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppSkillsRouteImport } from './routes/_app.skills'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppMemoriesRouteImport } from './routes/_app.memories'
 import { Route as AppJournalRouteImport } from './routes/_app.journal'
@@ -21,6 +20,7 @@ import { Route as AppExperiencesRouteImport } from './routes/_app.experiences'
 import { Route as AppDiscoverRouteImport } from './routes/_app.discover'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreativityRouteImport } from './routes/_app.creativity'
+import { Route as AppAtticRouteImport } from './routes/_app.attic'
 import { Route as AppExperiencesSlugRouteImport } from './routes/_app.experiences.$slug'
 import { Route as AppCreativityCategoryRouteImport } from './routes/_app.creativity.$category'
 
@@ -42,11 +42,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AppSkillsRoute = AppSkillsRouteImport.update({
-  id: '/skills',
-  path: '/skills',
-  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -83,6 +78,11 @@ const AppCreativityRoute = AppCreativityRouteImport.update({
   path: '/creativity',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAtticRoute = AppAtticRouteImport.update({
+  id: '/attic',
+  path: '/attic',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExperiencesSlugRoute = AppExperiencesSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -98,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/attic': typeof AppAtticRoute
   '/creativity': typeof AppCreativityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/discover': typeof AppDiscoverRoute
@@ -105,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
   '/settings': typeof AppSettingsRoute
-  '/skills': typeof AppSkillsRoute
   '/creativity/$category': typeof AppCreativityCategoryRoute
   '/experiences/$slug': typeof AppExperiencesSlugRoute
 }
@@ -113,6 +113,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/attic': typeof AppAtticRoute
   '/creativity': typeof AppCreativityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/discover': typeof AppDiscoverRoute
@@ -120,7 +121,6 @@ export interface FileRoutesByTo {
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
   '/settings': typeof AppSettingsRoute
-  '/skills': typeof AppSkillsRoute
   '/creativity/$category': typeof AppCreativityCategoryRoute
   '/experiences/$slug': typeof AppExperiencesSlugRoute
 }
@@ -130,6 +130,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_app/attic': typeof AppAtticRoute
   '/_app/creativity': typeof AppCreativityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/discover': typeof AppDiscoverRoute
@@ -137,7 +138,6 @@ export interface FileRoutesById {
   '/_app/journal': typeof AppJournalRoute
   '/_app/memories': typeof AppMemoriesRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_app/skills': typeof AppSkillsRoute
   '/_app/creativity/$category': typeof AppCreativityCategoryRoute
   '/_app/experiences/$slug': typeof AppExperiencesSlugRoute
 }
@@ -147,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/attic'
     | '/creativity'
     | '/dashboard'
     | '/discover'
@@ -154,7 +155,6 @@ export interface FileRouteTypes {
     | '/journal'
     | '/memories'
     | '/settings'
-    | '/skills'
     | '/creativity/$category'
     | '/experiences/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -162,6 +162,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/attic'
     | '/creativity'
     | '/dashboard'
     | '/discover'
@@ -169,7 +170,6 @@ export interface FileRouteTypes {
     | '/journal'
     | '/memories'
     | '/settings'
-    | '/skills'
     | '/creativity/$category'
     | '/experiences/$slug'
   id:
@@ -178,6 +178,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/onboarding'
+    | '/_app/attic'
     | '/_app/creativity'
     | '/_app/dashboard'
     | '/_app/discover'
@@ -185,7 +186,6 @@ export interface FileRouteTypes {
     | '/_app/journal'
     | '/_app/memories'
     | '/_app/settings'
-    | '/_app/skills'
     | '/_app/creativity/$category'
     | '/_app/experiences/$slug'
   fileRoutesById: FileRoutesById
@@ -226,13 +226,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_app/skills': {
-      id: '/_app/skills'
-      path: '/skills'
-      fullPath: '/skills'
-      preLoaderRoute: typeof AppSkillsRouteImport
-      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -283,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCreativityRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/attic': {
+      id: '/_app/attic'
+      path: '/attic'
+      fullPath: '/attic'
+      preLoaderRoute: typeof AppAtticRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/experiences/$slug': {
       id: '/_app/experiences/$slug'
       path: '/$slug'
@@ -325,6 +325,7 @@ const AppExperiencesRouteWithChildren = AppExperiencesRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAtticRoute: typeof AppAtticRoute
   AppCreativityRoute: typeof AppCreativityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppDiscoverRoute: typeof AppDiscoverRoute
@@ -332,10 +333,10 @@ interface AppRouteChildren {
   AppJournalRoute: typeof AppJournalRoute
   AppMemoriesRoute: typeof AppMemoriesRoute
   AppSettingsRoute: typeof AppSettingsRoute
-  AppSkillsRoute: typeof AppSkillsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAtticRoute: AppAtticRoute,
   AppCreativityRoute: AppCreativityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppDiscoverRoute: AppDiscoverRoute,
@@ -343,7 +344,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppJournalRoute: AppJournalRoute,
   AppMemoriesRoute: AppMemoriesRoute,
   AppSettingsRoute: AppSettingsRoute,
-  AppSkillsRoute: AppSkillsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Sparkles, Palette, Compass, BookOpen, Brain, GraduationCap, Settings, LogOut,
+  LayoutDashboard, Sparkles, Palette, Compass, BookOpen, Brain, GraduationCap, Settings, LogOut, Archive,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader,
@@ -11,11 +11,11 @@ import { useAuth } from "@/lib/auth-context";
 const items = [
   { title: "Dashboard",   url: "/dashboard",   icon: LayoutDashboard },
   { title: "Experiences", url: "/experiences", icon: Sparkles },
+  { title: "The Attic",   url: "/attic",       icon: Archive },
   { title: "Creativity",  url: "/creativity",  icon: Palette },
   { title: "Discover",    url: "/discover",    icon: Compass },
   { title: "Journal",     url: "/journal",     icon: BookOpen },
   { title: "Memories",    url: "/memories",    icon: Brain },
-  { title: "Skills",      url: "/skills",      icon: GraduationCap },
   { title: "Settings",    url: "/settings",    icon: Settings },
 ] as const;
 

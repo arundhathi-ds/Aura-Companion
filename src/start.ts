@@ -1,4 +1,5 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
+import { loadAllSkills } from "./core/skill-loader";
 
 import { renderErrorPage } from "./lib/error-page";
 
@@ -20,3 +21,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware],
 }));
+
+// Load skills in the background (non-blocking). This uses a Vite-friendly
+// dynamic import pattern when available; if unavailable it silently no-ops.
+loadAllSkills().catch(() => {});

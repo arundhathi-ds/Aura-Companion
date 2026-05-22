@@ -21,6 +21,8 @@ import { useCreativity } from "@/lib/creativity/use-creativity";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { useVoiceOutput } from "@/hooks/use-voice-output";
 import { SmartMusicPlayer } from "@/components/spotify/SmartMusicPlayer";
+import { CategoryBrowser } from "@/components/spotify/CategoryBrowser";
+
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -319,92 +321,14 @@ function Dashboard() {
           />
           {/* Conversational music discovery — intent + weather → songs */}
           <SmartMusicPlayer />
+          
+          {/* Emotional soundtrack browser — interactive category atmosphere explorer */}
+          <CategoryBrowser />
         </div>
       </section>
     </div>
   );
 }
-
-/* -------------------- Today's Experience -------------------- */
-
-function TodayExperience({ profile }: { profile: any }) {
-  const exp = useMemo(
-    () => pickTodaysExperience({
-      mood: profile?.current_mood,
-      focusAreas: profile?.focus_areas,
-      intentions: profile?.intentions,
-      socialComfort: 1, energy: 3,
-    }),
-    [profile?.current_mood, profile?.focus_areas, profile?.intentions]
-  );
-  const { savedSlugs, toggleSave } = useSavedExperiences();
-  const saved = savedSlugs.has(exp.slug);
-  const meta = CATEGORY_META[exp.category];
-
-  const energyLabel =
-    exp.energy <= 2 ? "Low · Soft" : exp.energy === 3 ? "Mid · Steady" : "Higher · Bold";
-  const moodMatch = profile?.current_mood && exp.moods.includes(String(profile.current_mood).toLowerCase()) ? "92%" : "78%";
-
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
-      className="glass-strong relative overflow-hidden rounded-3xl p-7"
-    >
-      <div className="absolute inset-0 -z-10 opacity-90" style={{ background: exp.gradient }} />
-      <Particles count={14} />
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-primary-glow">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.tint, boxShadow: `0 0 8px ${meta.tint}` }} />
-            Today's Experience · {meta.label}
-          </p>
-          <h2 className="mt-3 font-display text-3xl leading-tight md:text-4xl">{exp.title}</h2>
-          <p className="mt-3 max-w-xl text-sm text-muted-foreground md:text-base">{exp.description}</p>
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { toggleSave(exp.slug); toast(saved ? "Released from your memories" : "Saved to your memories"); }}
-          className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border transition ${
-            saved ? "border-primary/60 bg-primary/20 text-primary-glow" : "border-border bg-background/40 text-muted-foreground hover:text-foreground"
-          }`}
-          aria-label="Save"
-        >
-          <Bookmark className="h-4 w-4" fill={saved ? "currentColor" : "none"} />
-        </motion.button>
-      </div>
-
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat icon={Heart}  label="Mood match"  value={moodMatch} tint="oklch(0.85 0.18 320)" />
-        <Stat icon={Wind}   label="Energy"      value={energyLabel} tint="oklch(0.82 0.15 200)" />
-        <Stat icon={Flame}  label="Why for you" value={`${exp.durationMin} min`} tint="oklch(0.82 0.18 50)" />
-      </div>
-
-      <p className="mt-5 text-sm italic text-muted-foreground">"{exp.reasoning}"</p>
-
-      <div className="mt-5">
-        <Link to="/experiences"
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/40 px-4 py-2 text-xs backdrop-blur transition hover:border-primary/40 hover:text-foreground">
-          See more for your weather →
-        </Link>
-      </div>
-    </motion.article>
-  );
-}
-
-function Stat({ icon: Icon, label, value, tint }: { icon: any; label: string; value: string; tint: string }) {
-  return (
-    <div className="glass rounded-2xl p-3">
-      <div className="flex items-center gap-2">
-        <span className="grid h-7 w-7 place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${tint} 22%, transparent)`, boxShadow: `0 0 14px color-mix(in oklab, ${tint} 60%, transparent)` }}>
-          <Icon className="h-3.5 w-3.5" style={{ color: tint }} />
-        </span>
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
-      </div>
-      <p className="mt-2 text-sm font-medium">{value}</p>
-    </div>
-  );
-}
-
 /* -------------------- Insights Panel -------------------- */
 
 function InsightsPanel({
@@ -423,16 +347,6 @@ function InsightsPanel({
     tender:   { label: "Open Sky",          icon: Cloud, tint: "oklch(0.85 0.18 320)" },
   };
   const w = weatherByMood[(mood ?? "").toLowerCase()] ?? { label: "Creative Spark", icon: Sparkles, tint: "oklch(0.85 0.18 320)" };
-
-  const clamp = (n: number) => Math.max(8, Math.min(100, n));
-  const meters = [
-    { label: "Emotional energy", value: clamp(30 + counts.moods * 8),       icon: Heart, tint: "oklch(0.85 0.18 320)" },
-    { label: "Creativity",       value: clamp(25 + counts.creativity * 12), icon: Brain, tint: "oklch(0.78 0.16 295)" },
-    { label: "Reflection",       value: clamp(20 + counts.journals * 10),   icon: Wind,  tint: "oklch(0.82 0.15 200)" },
-    { label: "Lived moments",    value: clamp(18 + counts.completed * 14),  icon: Users, tint: "oklch(0.82 0.18 50)" },
-  ];
-
-  const QUICK_MOODS = ["calm", "curious", "heavy", "hopeful", "restless", "tender"];
 
   return (
     <motion.aside
@@ -464,32 +378,6 @@ function InsightsPanel({
         </div>
       </div>
 
-      {/* Meters */}
-      <div className="glass rounded-3xl p-5">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Inner readings</p>
-        <ul className="mt-4 space-y-4">
-          {meters.map((m, i) => (
-            <li key={m.label}>
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2">
-                  <m.icon className="h-3.5 w-3.5" style={{ color: m.tint }} />
-                  {m.label}
-                </span>
-                <span className="text-muted-foreground">{m.value}%</span>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted/50">
-                <motion.div
-                  initial={{ width: 0 }} animate={{ width: `${m.value}%` }}
-                  transition={{ delay: 0.5 + i * 0.1, duration: 1.1, ease: "easeOut" }}
-                  className="h-full rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${m.tint}, oklch(0.85 0.18 320))`, boxShadow: `0 0 14px ${m.tint}` }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-
       {/* Pulse */}
       <div className="glass relative overflow-hidden rounded-3xl p-5">
         <div className="flex items-center gap-3">
@@ -502,22 +390,8 @@ function InsightsPanel({
           </motion.span>
           <div>
             <p className="text-sm">Your companion is awake</p>
-            <p className="text-xs text-muted-foreground">Ready when you are</p>
+            <p className="text-xs text-muted-foreground">Ready when you are · observing silently</p>
           </div>
-        </div>
-      </div>
-
-      {/* Quick mood log */}
-      <div className="glass rounded-3xl p-5">
-        <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">A small check-in</p>
-        <p className="mt-1 text-xs text-muted-foreground">How are you, in a single word?</p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {QUICK_MOODS.map((m) => (
-            <button key={m} onClick={() => onLogMood(m)}
-              className="rounded-full border border-border bg-background/30 px-2.5 py-1 text-xs capitalize text-muted-foreground transition hover:border-primary/40 hover:text-foreground">
-              {m}
-            </button>
-          ))}
         </div>
       </div>
     </motion.aside>

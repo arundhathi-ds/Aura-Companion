@@ -14,41 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      completed_creativity: {
+      attic_artifacts: {
         Row: {
-          category: string
-          completed_at: string
-          content: string | null
+          artifact_type: string | null
+          created_at: string
+          description: string | null
+          file_url: string | null
           id: string
-          photo_url: string | null
-          prompt: string
-          reflection: string | null
+          metadata: Json | null
+          observation: string | null
           user_id: string
         }
         Insert: {
-          category: string
-          completed_at?: string
-          content?: string | null
+          artifact_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
           id?: string
-          photo_url?: string | null
-          prompt: string
-          reflection?: string | null
+          metadata?: Json | null
+          observation?: string | null
           user_id: string
         }
         Update: {
-          category?: string
-          completed_at?: string
-          content?: string | null
+          artifact_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
           id?: string
-          photo_url?: string | null
-          prompt?: string
-          reflection?: string | null
+          metadata?: Json | null
+          observation?: string | null
           user_id?: string
         }
         Relationships: []
       }
       completed_experiences: {
         Row: {
+          atmosphere_tags: string[] | null
           completed_at: string
           duration_min: number | null
           experience_slug: string
@@ -57,9 +58,11 @@ export type Database = {
           mood_before: string | null
           note: string | null
           photo_url: string | null
+          resonance_score: number | null
           user_id: string
         }
         Insert: {
+          atmosphere_tags?: string[] | null
           completed_at?: string
           duration_min?: number | null
           experience_slug: string
@@ -68,9 +71,11 @@ export type Database = {
           mood_before?: string | null
           note?: string | null
           photo_url?: string | null
+          resonance_score?: number | null
           user_id: string
         }
         Update: {
+          atmosphere_tags?: string[] | null
           completed_at?: string
           duration_min?: number | null
           experience_slug?: string
@@ -79,7 +84,70 @@ export type Database = {
           mood_before?: string | null
           note?: string | null
           photo_url?: string | null
+          resonance_score?: number | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completed_experiences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emotional_arcs: {
+        Row: {
+          arc_name: string
+          ended_at: string | null
+          id: string
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          arc_name: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          arc_name?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emotional_weather: {
+        Row: {
+          created_at: string | null
+          id: string
+          intensity: number
+          triggered_by: string | null
+          user_id: string
+          weather_state: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          intensity?: number
+          triggered_by?: string | null
+          user_id: string
+          weather_state: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          intensity?: number
+          triggered_by?: string | null
+          user_id?: string
+          weather_state?: string
         }
         Relationships: []
       }
@@ -87,34 +155,48 @@ export type Database = {
         Row: {
           ai_emotion: string | null
           ai_summary: string | null
+          atmosphere_tags: string[] | null
           content: string
           created_at: string
           id: string
           mood: string | null
           prompt: string | null
+          resonance_score: number | null
           user_id: string
         }
         Insert: {
           ai_emotion?: string | null
           ai_summary?: string | null
+          atmosphere_tags?: string[] | null
           content: string
           created_at?: string
           id?: string
           mood?: string | null
           prompt?: string | null
+          resonance_score?: number | null
           user_id: string
         }
         Update: {
           ai_emotion?: string | null
           ai_summary?: string | null
+          atmosphere_tags?: string[] | null
           content?: string
           created_at?: string
           id?: string
           mood?: string | null
           prompt?: string | null
+          resonance_score?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "journals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mood_logs: {
         Row: {
@@ -141,42 +223,47 @@ export type Database = {
           note?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mood_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string
           current_mood: string | null
           display_name: string | null
           focus_areas: string[] | null
           id: string
           intentions: string[] | null
-          onboarding_completed: boolean
+          onboarding_completed: boolean | null
           tone_preference: string | null
           updated_at: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
           current_mood?: string | null
           display_name?: string | null
           focus_areas?: string[] | null
           id: string
           intentions?: string[] | null
-          onboarding_completed?: boolean
+          onboarding_completed?: boolean | null
           tone_preference?: string | null
           updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
           current_mood?: string | null
           display_name?: string | null
           focus_areas?: string[] | null
           id?: string
           intentions?: string[] | null
-          onboarding_completed?: boolean
+          onboarding_completed?: boolean | null
           tone_preference?: string | null
           updated_at?: string
         }
@@ -203,30 +290,6 @@ export type Database = {
           note?: string | null
           saved_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      user_preferences: {
-        Row: {
-          id: string
-          key: string
-          updated_at: string
-          user_id: string
-          value: Json
-        }
-        Insert: {
-          id?: string
-          key: string
-          updated_at?: string
-          user_id: string
-          value?: Json
-        }
-        Update: {
-          id?: string
-          key?: string
-          updated_at?: string
-          user_id?: string
-          value?: Json
         }
         Relationships: []
       }

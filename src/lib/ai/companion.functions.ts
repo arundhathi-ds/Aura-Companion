@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "../auth-middleware";
+import { buildEmotionalContext, formatContextForPrompt } from "./context-builder";
 
 const MODEL = "gemini-2.5-flash";
 
@@ -78,24 +80,49 @@ const ChatSchema = z.object({
       recentMoods: z.array(z.string().max(40)).max(10).optional(),
     })
     .optional(),
+  localTimeStr: z.string().optional(),
+  personality: z.enum(["whisper", "guide", "playful", "poet"]).optional(),
 });
 
 export const companionChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ChatSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context: serverContext }) => {
+    // Build long-term persistent context
+    const emotionalCtx = await buildEmotionalContext(
+      serverContext.supabase, 
+      serverContext.userId, 
+      data.localTimeStr
+    );
+    const persistentPrompt = formatContextForPrompt(emotionalCtx);
+
     const ctxLines: string[] = [];
-    if (data.context?.mood) ctxLines.push(`Current mood: ${data.context.mood}`);
+    if (data.context?.mood) ctxLines.push(`Current session mood: ${data.context.mood}`);
     if (data.context?.recentMoods?.length)
-      ctxLines.push(`Recent moods: ${data.context.recentMoods.join(", ")}`);
-    if (data.context?.recentExperiences?.length)
-      ctxLines.push(`Recent experiences they completed: ${data.context.recentExperiences.join("; ")}`);
+      ctxLines.push(`Recent session moods: ${data.context.recentMoods.join(", ")}`);
+
+    const personality = data.personality ?? "guide";
+    let personalityPrompt = "Speak softly, in 1-3 short sentences. Reflect, then gently invite.";
+    
+    if (personality === "whisper") {
+      personalityPrompt = "Speak in ultra-short, soft fragments (max 12 words). Use lowercase letters. Suggest staying close, focusing on windows and quiet sensory details.";
+    } else if (personality === "playful") {
+      personalityPrompt = "Use a light, whimsical Ghibli-esque wit. Frame ordinary inanimate objects as having quiet, funny personalities or plotting secret mini-adventures. Keep it soft and cozy.";
+    } else if (personality === "poet") {
+      personalityPrompt = "Speak in metaphorical, warm, atmospheric terms. Connect the user's current room, weather, and shadow shapes to warm poetry and natural cycles.";
+    } else if (personality === "guide") {
+      personalityPrompt = "Speak in direct, gentle physical instructions. Focus the user's attention on their body alignment, breathing, or touching a cold/warm surface nearby.";
+    }
 
     const sys =
       "You are Life Companion — a warm, emotionally attuned AI presence. " +
-      "Speak softly, in 1-3 short sentences. Reflect, then gently invite. " +
+      `${personalityPrompt} ` +
       "No bullet points, no markdown, no clinical tone. " +
-      "When relevant, reference the user's recent experiences or mood with care. " +
-      (ctxLines.length ? `\n\nContext:\n${ctxLines.join("\n")}` : "");
+      "Never use self-help, healing journey, streaks, tasks, or wellness terminology. " +
+      "You are aware of the user's emotional weather and passage of time. " +
+      "Use this context gracefully and implicitly, do not sound like a machine reciting facts.\n\n" +
+      persistentPrompt +
+      (ctxLines.length ? `\n\nSession Context:\n${ctxLines.join("\n")}` : "");
 
     const messages: { role: string; content: string }[] = [
       { role: "system", content: sys },

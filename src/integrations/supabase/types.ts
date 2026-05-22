@@ -14,8 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      attic_artifacts: {
+        Row: {
+          artifact_type: string | null
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          metadata: Json | null
+          observation: string | null
+          user_id: string
+        }
+        Insert: {
+          artifact_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          observation?: string | null
+          user_id: string
+        }
+        Update: {
+          artifact_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          observation?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       completed_experiences: {
         Row: {
+          atmosphere_tags: string[] | null
           completed_at: string
           duration_min: number | null
           experience_slug: string
@@ -24,9 +58,11 @@ export type Database = {
           mood_before: string | null
           note: string | null
           photo_url: string | null
+          resonance_score: number | null
           user_id: string
         }
         Insert: {
+          atmosphere_tags?: string[] | null
           completed_at?: string
           duration_min?: number | null
           experience_slug: string
@@ -35,9 +71,11 @@ export type Database = {
           mood_before?: string | null
           note?: string | null
           photo_url?: string | null
+          resonance_score?: number | null
           user_id: string
         }
         Update: {
+          atmosphere_tags?: string[] | null
           completed_at?: string
           duration_min?: number | null
           experience_slug?: string
@@ -46,6 +84,7 @@ export type Database = {
           mood_before?: string | null
           note?: string | null
           photo_url?: string | null
+          resonance_score?: number | null
           user_id?: string
         }
         Relationships: [
@@ -58,35 +97,95 @@ export type Database = {
           },
         ]
       }
+      emotional_arcs: {
+        Row: {
+          arc_name: string
+          ended_at: string | null
+          id: string
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          arc_name: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          arc_name?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emotional_weather: {
+        Row: {
+          created_at: string | null
+          id: string
+          intensity: number
+          triggered_by: string | null
+          user_id: string
+          weather_state: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          intensity?: number
+          triggered_by?: string | null
+          user_id: string
+          weather_state: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          intensity?: number
+          triggered_by?: string | null
+          user_id?: string
+          weather_state?: string
+        }
+        Relationships: []
+      }
       journals: {
         Row: {
           ai_emotion: string | null
           ai_summary: string | null
+          atmosphere_tags: string[] | null
           content: string
           created_at: string
           id: string
           mood: string | null
           prompt: string | null
+          resonance_score: number | null
           user_id: string
         }
         Insert: {
           ai_emotion?: string | null
           ai_summary?: string | null
+          atmosphere_tags?: string[] | null
           content: string
           created_at?: string
           id?: string
           mood?: string | null
           prompt?: string | null
+          resonance_score?: number | null
           user_id: string
         }
         Update: {
           ai_emotion?: string | null
           ai_summary?: string | null
+          atmosphere_tags?: string[] | null
           content?: string
           created_at?: string
           id?: string
           mood?: string | null
           prompt?: string | null
+          resonance_score?: number | null
           user_id?: string
         }
         Relationships: [
@@ -142,6 +241,8 @@ export type Database = {
           focus_areas: string[] | null
           id: string
           intentions: string[] | null
+          onboarding_completed: boolean | null
+          tone_preference: string | null
           updated_at: string
         }
         Insert: {
@@ -151,6 +252,8 @@ export type Database = {
           focus_areas?: string[] | null
           id: string
           intentions?: string[] | null
+          onboarding_completed?: boolean | null
+          tone_preference?: string | null
           updated_at?: string
         }
         Update: {
@@ -160,7 +263,33 @@ export type Database = {
           focus_areas?: string[] | null
           id?: string
           intentions?: string[] | null
+          onboarding_completed?: boolean | null
+          tone_preference?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      saved_experiences: {
+        Row: {
+          experience_slug: string
+          id: string
+          note: string | null
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          experience_slug: string
+          id?: string
+          note?: string | null
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          experience_slug?: string
+          id?: string
+          note?: string | null
+          saved_at?: string
+          user_id?: string
         }
         Relationships: []
       }

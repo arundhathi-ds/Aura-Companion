@@ -1,0 +1,6 @@
+{
+  "triggers": [
+    { "type": "time_of_day", "pattern": "night" },
+    { "type": "user_pref", "pattern": "whisper_mode" }
+  ]
+}

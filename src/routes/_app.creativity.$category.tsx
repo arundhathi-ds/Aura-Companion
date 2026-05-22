@@ -1,7 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Camera, Check, Shuffle, Sparkles, Wind, Palette, Music2, Feather, Image as ImageIcon } from "lucide-react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
+import {
+  ArrowLeft,
+  Check,
+  Shuffle,
+  Sparkles,
+  Wind,
+  Palette,
+  Music2,
+  Feather,
+  Image as ImageIcon,
+  Film,
+  Moon,
+  BookOpen,
+  Volume2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { CREATIVITY, type CreativityCategory, pickPrompt } from "@/data/creativity";
 import { Particles } from "@/components/companion/Particles";
@@ -9,18 +23,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreativity } from "@/lib/creativity/use-creativity";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/integrations/supabase/client";
+import { useEmotionVisuals } from "@/hooks/useEmotionVisuals";
+import { useMoodLogs } from "@/lib/mood/use-mood-logs";
+import { useJournals } from "@/lib/journals/use-journals";
 
 export const Route = createFileRoute("/_app/creativity/$category")({
   component: CategoryPage,
   head: ({ params }) => ({
     meta: [
-      { title: `${(CREATIVITY as any)[params.category]?.label ?? "Studio"} — Life Companion` },
+      { title: `${(CREATIVITY as any)[params.category]?.label ?? "Studio"} � Life Companion` },
     ],
   }),
 });
-
-// ───────────────────────────── Mood + inspiration data ─────────────────────────────
 
 const MOODS = [
   { key: "tender", label: "Tender" },
@@ -32,7 +46,6 @@ const MOODS = [
 ] as const;
 type MoodKey = (typeof MOODS)[number]["key"];
 
-// Emotion → palette for the painting studio
 const EMOTION_PALETTES: Record<MoodKey, { name: string; colors: string[]; whisper: string }> = {
   tender:    { name: "Soft dawn",    colors: ["#f4d3d8", "#e9b1c1", "#c98aa8", "#7a5e8a"], whisper: "Begin where the day is still half-asleep." },
   restless:  { name: "Ember storm",  colors: ["#ffb088", "#ff6b6b", "#c33764", "#1d2671"], whisper: "Let the brush move faster than your thoughts." },
@@ -42,63 +55,104 @@ const EMOTION_PALETTES: Record<MoodKey, { name: string; colors: string[]; whispe
   still:     { name: "Linen quiet",  colors: ["#f5f0e8", "#dce5d4", "#a8c0a0", "#7d9b76"], whisper: "Make a small piece. Let the silence stay." },
 };
 
-// Floating inspiration micro-cards (per studio)
 const INSPIRATION: Record<CreativityCategory, string[]> = {
   photography: [
     "Find the softest light in the room.",
-    "Photograph what your hands have been holding.",
-    "Frame a window like it's a painting.",
-    "Capture one thing that won't exist tomorrow.",
-    "Shoot a reflection without yourself in it.",
+    "Notice a reflection you almost missed.",
+    "Frame a quiet corner like a painting.",
+    "Capture one thing that feels both fragile and steady.",
   ],
   painting: [
-    "Two colors, one feeling.",
-    "Paint the weather inside your chest.",
-    "Make a mark you don't understand.",
-    "Let a color you usually avoid lead.",
-    "Smudge something on purpose.",
+    "Let one color whisper the rest of the piece.",
+    "Paint the weather that lives inside you.",
+    "Make a small mark and wait.",
+    "Choose a shade that feels like a memory.",
   ],
   dance: [
-    "Move only your shoulders for a verse.",
+    "Move one gesture slowly enough to feel it.",
     "Let the floor hold half your weight.",
-    "Find one gesture and repeat it slow.",
-    "Dance the shape of a word.",
-    "Stop on the next quiet beat.",
+    "Step with only one arm receiving the rhythm.",
+    "Hold the pause as if it were melody.",
   ],
   writing: [
-    "Write the sentence you almost deleted.",
-    "Begin with: 'Today I noticed…'",
-    "Describe a person using only weather.",
-    "Write a line you'd whisper, not speak.",
-    "End with a question that has no answer.",
+    "Write a line you would whisper to yourself.",
+    "Describe today as a room with one window.",
+    "Let one sentence be only about the weather inside you.",
+    "Begin with a feeling and let the words follow.",
   ],
   music: [
-    "Hum a melody for 30 seconds.",
-    "Find a song you forgot you loved.",
-    "Listen with your eyes closed.",
-    "Tap the rhythm of your breath.",
+    "Close your eyes and listen to the room.",
+    "Name the first sound you hear after silence.",
+    "Let the melody feel like evening light.",
+    "Notice how a quiet sound shifts your breath.",
+  ],
+  film: [
+    "Describe a single scene as if it were the opening shot.",
+    "Choose the light, the motion, and the hush of the room.",
+    "Write the first line of the scene as a soft memory.",
+    "See a moment in shadow, then name its tone.",
+  ],
+  "midnight-walks": [
+    "Find one street that feels like a hidden line of poetry.",
+    "Notice the way the night holds a single sound.",
+    "Describe a lamp or a door that seems to be waiting.",
+    "Let your steps become a quiet story.",
+  ],
+  "memory-room": [
+    "Recall a small detail from a room you once loved.",
+    "Name one feeling from an old afternoon.",
+    "Write the title of a memory you are ready to visit.",
+    "Describe the light or color of a forgotten moment.",
+  ],
+  soundscape: [
+    "Listen to the room as if it were a gentle composition.",
+    "Find three layers of sound and give them a name.",
+    "Describe the texture of the air in sound words.",
+    "Let silence become one of the instruments.",
   ],
 };
 
-// Poetic guidance (one floating line under the prompt)
 const POETICS: Record<CreativityCategory, string[]> = {
   photography: ["Light is a memory you can hold.", "The frame is small. The world fits anyway.", "Look slower than you usually do."],
   painting:    ["Color is a softer language for what's inside.", "The page is a place you're allowed to stay.", "Mistakes are how the painting begins."],
   dance:       ["The body remembers what the mouth forgot.", "Move first. Understand later.", "There is no audience here."],
   writing:     ["Six honest lines is enough.", "Write the page only you can write.", "The truest sentence first."],
   music:       ["Sound makes a room for feelings to sit in.", "Listen like you're being told a secret.", "Volume is a feeling."],
+  film:        ["A scene does not need an audience to be true.", "The quietest stories are often the richest.", "Light is the first actor in every film."],
+  "midnight-walks": ["The night hears what you do not say.", "A street can feel like a sentence.", "Walking slowly makes the unseen visible."],
+  "memory-room": ["Some memories only open in quiet rooms.", "Hold one detail lightly.", "Remembering is a sacred ritual."],
+  soundscape:   ["Sound is the shape of the space around you.", "The softest noise can carry the deepest feeling.", "Listen like the world is speaking just to you."],
 };
 
-// Map category → primary icon
-const CAT_ICON: Record<CreativityCategory, React.ComponentType<{ className?: string }>> = {
+const PHOTOGRAPHY_ENTRY_LINES = [
+  "The studio opens slowly, like a door in the dark.",
+  "Tonight is for one small frame that feels like it could glow from within.",
+  "Notice the light that is already there, waiting to be seen.",
+];
+
+function generatePhotographyMission(mood: MoodKey, isLate: boolean, memoryCue: string) {
+  const base = isLate
+    ? "Capture a soft warmth in the cool dark."
+    : "Find the quiet light in a small, ordinary corner.";
+
+  if (memoryCue.includes("last mood")) {
+    return `Capture the edge of ${mood} in a single frame. Let the image feel as calm as the weather you carried last.`;
+  }
+
+  return `${base} Make the photograph feel like a secret you can return to.`;
+}
+
+const CAT_ICON: Record<CreativityCategory, ComponentType<{ className?: string }>> = {
   photography: ImageIcon,
   painting: Palette,
   dance: Wind,
   writing: Feather,
   music: Music2,
+  film: Film,
+  "midnight-walks": Moon,
+  "memory-room": BookOpen,
+  soundscape: Volume2,
 };
-
-// ───────────────────────────── Component ─────────────────────────────
 
 function CategoryPage() {
   const { category } = Route.useParams();
@@ -106,6 +160,8 @@ function CategoryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { completed, finish } = useCreativity();
+  const { logs } = useMoodLogs();
+  const { journals } = useJournals();
 
   const [mood, setMood] = useState<MoodKey>("luminous");
   const [prompt, setPrompt] = useState<string>(() =>
@@ -113,12 +169,56 @@ function CategoryPage() {
   );
   const [content, setContent] = useState("");
   const [reflection, setReflection] = useState("");
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
   const [done, setDone] = useState(false);
-  const [energy, setEnergy] = useState(3); // dance studio
-  const [chosenColor, setChosenColor] = useState<string | null>(null); // painting
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [energy, setEnergy] = useState(3);
+  const [chosenColor, setChosenColor] = useState<string | null>(null);
+  const [ritualReady, setRitualReady] = useState(false);
+  const [entryLine, setEntryLine] = useState(0);
+  const [ambientReady, setAmbientReady] = useState(false);
+  const [mission, setMission] = useState("");
+  const [companionNote, setCompanionNote] = useState("The studio is listening to your breath.");
+
+  const visuals = useEmotionVisuals(700);
+  const isPhotography = cat?.key === "photography";
+  const studioOpen = !isPhotography || (ritualReady && ambientReady);
+  const promptSource = isPhotography && mission ? mission : prompt;
+
+  const moodLabel = MOODS.find((m) => m.key === mood)?.label.toLowerCase() ?? "soft";
+
+  useEffect(() => {
+    const lastMood = logs[0]?.mood as MoodKey | undefined;
+    if (lastMood && MOODS.some((m) => m.key === lastMood)) {
+      setMood(lastMood);
+    }
+  }, [logs]);
+
+  useEffect(() => {
+    if (!isPhotography) return;
+
+    setEntryLine(0);
+    setAmbientReady(false);
+    setMission("");
+    setCompanionNote("The studio is listening to your breath.");
+
+    const isLate = new Date().getHours() >= 20 || new Date().getHours() < 5;
+    const memoryCueText = journals.length > 0
+      ? `Three nights ago you wrote: "${journals[0].content.trim().split("\n")[0].slice(0, 90)}"`
+      : logs.length > 0
+        ? `Your last mood was ${logs[0].mood}. The studio listens to that weather.`
+        : "This quiet room is built to remember what you bring tonight.";
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    PHOTOGRAPHY_ENTRY_LINES.forEach((_, index) => {
+      timers.push(setTimeout(() => setEntryLine(index + 1), 1200 + index * 1200));
+    });
+    timers.push(setTimeout(() => {
+      setAmbientReady(true);
+      setMission(generatePhotographyMission(mood, isLate, memoryCueText));
+      setCompanionNote("A slow light is ready. When you are ready, let yourself frame it.");
+    }, 4200));
+
+    return () => timers.forEach(clearTimeout);
+  }, [isPhotography, journals, logs, mood]);
 
   const myCompleted = useMemo(
     () => completed.filter((c) => c.category === (category as CreativityCategory)).slice(0, 6),
@@ -127,7 +227,6 @@ function CategoryPage() {
 
   const inspiration = useMemo(() => {
     const list = cat ? INSPIRATION[cat.key] : [];
-    // pick 4 deterministic-ish per session
     return [...list].sort(() => Math.random() - 0.5).slice(0, 4);
   }, [cat]);
 
@@ -136,53 +235,45 @@ function CategoryPage() {
     return list[Math.floor(Math.random() * list.length)] ?? "";
   }, [cat]);
 
+  const memoryCue = useMemo(() => {
+    if (journals.length > 0) {
+      const firstLine = journals[0].content.trim().split("\n")[0].slice(0, 90);
+      return `Three nights ago you wrote: "${firstLine}"`;
+    }
+    if (logs.length > 0) {
+      return `Your last mood was ${logs[0].mood}. The studio listens to that weather.`;
+    }
+    return "This quiet room is built to remember what you bring tonight.";
+  }, [journals, logs]);
+
   useEffect(() => {
-    setDone(false); setContent(""); setReflection(""); setPhotoUrl(null); setExtraPhotos([]); setChosenColor(null);
+    setDone(false);
+    setContent("");
+    setReflection("");
+    setChosenColor(null);
+    setRitualReady(false);
   }, [category]);
 
   if (!cat) {
     return (
       <div className="mx-auto max-w-3xl py-20 text-center">
-        <p className="text-muted-foreground">This studio is not open.</p>
+        <p className="text-muted-foreground">This studio is still waking. Return later to explore its light.</p>
         <Link to="/creativity" className="mt-4 inline-block text-primary-glow underline">Back to creativity</Link>
       </div>
     );
   }
 
   const Icon = CAT_ICON[cat.key];
-  const palette = EMOTION_PALETTES[mood];
-
-  const onPhoto = async (file: File, asExtra = false) => {
-    if (!user) return;
-    const path = `${user.id}/${crypto.randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
-    const { error } = await supabase.storage.from("memories").upload(path, file, { upsert: false });
-    if (error) { toast.error("Couldn't upload"); return; }
-    const { data } = supabase.storage.from("memories").getPublicUrl(path);
-    if (asExtra) setExtraPhotos((p) => [...p, data.publicUrl]);
-    else setPhotoUrl(data.publicUrl);
-    toast.success("Held");
-  };
-
-  const moodInfusedPrompt = useMemo(() => {
-    if (!cat) return prompt;
-    const moodLabel = MOODS.find((m) => m.key === mood)?.label.toLowerCase();
-    return `${prompt}  ·  feeling ${moodLabel}`;
-  }, [prompt, mood, cat]);
+  const promptLabel = `${cat.label} invitation`;
 
   const save = async () => {
     try {
-      const richReflection = [
-        reflection,
-        chosenColor ? `Color held: ${chosenColor}` : null,
-        cat.key === "dance" ? `Energy: ${energy}/5` : null,
-        extraPhotos.length ? `Extra frames: ${extraPhotos.length}` : null,
-      ].filter(Boolean).join("  ·  ");
       await finish({
         category: cat.key,
-        prompt: moodInfusedPrompt,
+        prompt,
         content: content || null,
-        reflection: richReflection || null,
-        photo_url: photoUrl ?? extraPhotos[0] ?? null,
+        reflection: reflection || null,
+        photo_url: null,
       });
       setDone(true);
       toast.success("Held in your memories");
@@ -193,13 +284,15 @@ function CategoryPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      {/* Atmospheric hero */}
       <motion.section
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
-        className="glass-strong relative overflow-hidden rounded-[2rem] p-6 md:p-12"
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
+        className="glass-strong relative overflow-hidden rounded-[2rem] p-6 md:p-10"
+        style={{
+          background: cat.gradient,
+          opacity: 0.92 + visuals.opacity * 0.08,
+        }}
       >
-        {/* layered animated background */}
-        <div className="absolute inset-0 -z-10" style={{ background: cat.gradient }} />
+        <Particles count={26} />
         <motion.div
           aria-hidden
           className="absolute -left-24 -top-24 -z-10 h-[28rem] w-[28rem] rounded-full opacity-60 blur-3xl"
@@ -207,94 +300,104 @@ function CategoryPage() {
           animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
-        <motion.div
-          aria-hidden
-          className="absolute -bottom-24 -right-24 -z-10 h-[26rem] w-[26rem] rounded-full opacity-50 blur-3xl"
-          style={{ background: `radial-gradient(circle, ${palette.colors[2]} 0%, transparent 70%)` }}
-          animate={{ scale: [1.1, 1, 1.1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <Particles count={26} />
 
-        <div className="relative">
-          <Link to="/creativity"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/40 px-3 py-1.5 text-xs backdrop-blur hover:border-primary/40">
-            <ArrowLeft className="h-3.5 w-3.5" /> Studios
-          </Link>
-
-          <div className="mt-6 flex items-center gap-3">
-            <motion.div
-              animate={{ y: [0, -6, 0], rotate: [0, 4, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="grid h-12 w-12 place-items-center rounded-2xl bg-background/40 backdrop-blur ring-1 ring-white/10"
-              style={{ boxShadow: `0 0 40px ${cat.tint}` }}
-            >
-              <Icon className="h-5 w-5 text-primary-glow" />
-            </motion.div>
-            <p className="text-xs uppercase tracking-[0.3em] text-primary-glow">{cat.label} studio</p>
+        <div className="relative flex flex-col gap-6">
+          <div className="flex items-center justify-between gap-3">
+            <Link to="/creativity"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/40 px-3 py-1.5 text-xs backdrop-blur hover:border-primary/40">
+              <ArrowLeft className="h-3.5 w-3.5" /> Studios
+            </Link>
+            <span className="rounded-full border border-white/15 bg-background/30 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-muted-foreground backdrop-blur">
+              studio ritual
+            </span>
           </div>
 
-          <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">{cat.tagline}</h1>
-          <motion.p
-            key={poetic}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="mt-4 max-w-xl text-sm italic text-muted-foreground md:text-base"
-          >
-            "{poetic}"
-          </motion.p>
-
-          {/* Mood selector */}
-          <div className="mt-8">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">How does today feel?</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {MOODS.map((m) => {
-                const active = m.key === mood;
-                return (
-                  <button key={m.key} onClick={() => setMood(m.key)}
-                    className={`rounded-full border px-3 py-1.5 text-xs backdrop-blur transition ${
-                      active
-                        ? "border-primary/60 bg-primary/15 text-foreground shadow-[0_0_20px_oklch(0.78_0.16_295/0.4)]"
-                        : "border-border/60 bg-background/30 text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                );
-              })}
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-background/30 px-3 py-2 text-sm text-primary-glow backdrop-blur">
+                <Icon className="h-4 w-4" /> {cat.label}
+              </div>
+              <h1 className="mt-4 font-display text-4xl leading-[1.05] md:text-6xl">{cat.tagline}</h1>
+              <p className="mt-4 max-w-2xl text-sm italic text-muted-foreground md:text-base">{poetic}</p>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-background/20 p-5 text-sm text-muted-foreground backdrop-blur">
+              The studio listens to the light. Your companion matches it with quiet presence.
+              <div className="mt-3 rounded-2xl bg-background/40 p-3 text-xs leading-tight text-slate-200">
+                {`Tonight the studio listens to ${moodLabel}. Let it feel slow, intimate and unforced.`}
+              </div>
             </div>
           </div>
         </div>
       </motion.section>
 
-      {/* Prompt + floating inspiration */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <motion.section
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
           className="glass relative overflow-hidden rounded-3xl p-6"
         >
           <Sparkles className="absolute right-5 top-5 h-4 w-4 text-primary-glow/60" />
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Today's invitation</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{promptLabel}</p>
+
           <AnimatePresence mode="wait">
-            <motion.h2 key={prompt + mood}
+            <motion.h2 key={promptSource + mood}
               initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
               transition={{ duration: 0.5 }}
-              className="mt-3 font-display text-2xl leading-snug md:text-3xl">
-              {prompt}
+              className="mt-3 font-display text-2xl leading-snug md:text-3xl"
+            >
+              {promptSource}
             </motion.h2>
           </AnimatePresence>
+
           <p className="mt-3 text-xs text-muted-foreground">
-            Tuned to your <span className="text-foreground">{MOODS.find(m=>m.key===mood)?.label.toLowerCase()}</span> weather.
+            Tuned to your <span className="text-foreground">{MOODS.find((m) => m.key === mood)?.label.toLowerCase()}</span> weather.
           </p>
-          <div className="mt-5">
+
+          <div className="mt-5 flex flex-wrap gap-3">
             <Button variant="outline" size="sm" onClick={() => setPrompt(pickPrompt(cat.key, crypto.randomUUID()))}>
               <Shuffle className="mr-1.5 h-3.5 w-3.5" /> Another invitation
             </Button>
+            <Button variant={ritualReady ? "secondary" : "default"} size="sm" onClick={() => setRitualReady(true)}>
+              {ritualReady ? "Studio is ready" : "Light the candle"}
+            </Button>
           </div>
+
+          <div className="mt-5 rounded-3xl border border-border/50 bg-background/40 p-4 text-sm text-muted-foreground backdrop-blur">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Soft ritual</p>
+            <p className="mt-2 leading-relaxed">
+              {ritualReady
+                ? ambientReady
+                  ? "Lean into the calm. The studio is open. Move with a single careful gesture."
+                  : "The room is warming. Wait for the air to settle before you reach for the frame."
+                : "Before the studio opens, take one slow breath and invite yourself in. This place is for feeling, not doing."}
+            </p>
+          </div>
+
+          {isPhotography && (
+            <div className="mt-5 rounded-3xl border border-border/40 bg-background/30 p-4 text-sm text-muted-foreground backdrop-blur">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Cinematic entry</p>
+              <div className="mt-3 space-y-3">
+                {PHOTOGRAPHY_ENTRY_LINES.slice(0, entryLine).map((line, index) => (
+                  <motion.p key={index}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: index * 0.12 }}
+                    className="text-sm leading-relaxed"
+                  >
+                    {line}
+                  </motion.p>
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-slate-300">
+                {ambientReady
+                  ? "Ambient layer engaged. The room has settled into a slow, candlelit rhythm."
+                  : "A soft ambient current is gathering. Hold space until the light feels right."}
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground">{companionNote}</p>
+            </div>
+          )}
         </motion.section>
 
-        {/* Floating inspiration cards */}
         <section className="relative">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Drift through these</p>
           <div className="mt-3 space-y-3">
@@ -315,157 +418,174 @@ function CategoryPage() {
               </motion.div>
             ))}
           </div>
+          <div className="mt-6 rounded-3xl border border-border/50 bg-background/40 p-4 text-sm text-muted-foreground backdrop-blur">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Memory cue</p>
+            <p className="mt-2 leading-relaxed text-slate-200">{memoryCue}</p>
+          </div>
         </section>
       </div>
 
-      {/* Studio-specific workspace */}
       {!done && (
         <section className="mt-6 grid gap-6">
-          {/* PHOTOGRAPHY: visual storytelling + memory uploads */}
-          {cat.key === "photography" && (
+          {cat.key === "photography" && !studioOpen && (
             <div className="glass rounded-3xl p-6">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Visual storytelling</p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Photography ritual</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Capture three frames that, together, tell a small story. They don't need to make sense — only feel true.
+                Imagine a small scene. The studio is still waking. Hold your gaze and let one quiet detail come forward.
               </p>
-
-              <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                onChange={(e) => e.target.files?.[0] && onPhoto(e.target.files[0], extraPhotos.length + (photoUrl?1:0) > 0)} />
-
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {[photoUrl, ...extraPhotos].filter(Boolean).map((url, i) => (
-                  <motion.div key={String(url)+i}
-                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                    className="relative aspect-square overflow-hidden rounded-2xl ring-1 ring-white/10"
-                  >
-                    <img src={url as string} alt="" className="h-full w-full object-cover" />
-                  </motion.div>
-                ))}
-                <button onClick={() => fileRef.current?.click()}
-                  className="aspect-square rounded-2xl border border-dashed border-border/60 bg-background/30 text-xs text-muted-foreground transition hover:border-primary/50 hover:text-foreground">
-                  <Camera className="mx-auto mb-1 h-5 w-5" />
-                  Add a frame
-                </button>
+              <div className="mt-5 rounded-3xl border border-border/30 bg-background/20 p-4 text-sm text-slate-200">
+                {mission || "A quiet frame is waiting. Let the light settle before you take the first note."}
               </div>
+              <div className="mt-4 text-xs uppercase tracking-[0.3em] text-muted-foreground">This is a memory-aware ritual. When the studio opens, the frame will become clearer.</div>
             </div>
           )}
 
-          {/* PAINTING: emotion-to-color */}
+          {cat.key === "photography" && studioOpen && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Photography ritual</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Notice the light, the shadow and the feeling you would keep if you could frame it forever.
+              </p>
+              <div className="mt-5 rounded-3xl border border-border/30 bg-background/20 p-4 text-sm text-slate-200">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Your light mission</p>
+                <p className="mt-2 leading-relaxed">{mission || "Capture the quiet warmth in a single frame."}</p>
+              </div>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Describe the one frame you would hold tonight..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
           {cat.key === "painting" && (
             <div className="glass rounded-3xl p-6">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Emotion → color</p>
-              <h3 className="mt-2 font-display text-xl">{palette.name}</h3>
-              <p className="mt-1 text-sm italic text-muted-foreground">"{palette.whisper}"</p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Painting ritual</p>
+              <h3 className="mt-2 font-display text-xl">{EMOTION_PALETTES[mood].name}</h3>
+              <p className="mt-1 text-sm italic text-muted-foreground">"{EMOTION_PALETTES[mood].whisper}"</p>
 
               <div className="mt-5 grid grid-cols-4 gap-3">
-                {palette.colors.map((c) => {
+                {EMOTION_PALETTES[mood].colors.map((c) => {
                   const active = chosenColor === c;
                   return (
-                    <motion.button key={c} onClick={() => setChosenColor(c)}
-                      whileHover={{ y: -3 }}
+                    <button key={c} onClick={() => setChosenColor(c)}
                       className={`relative aspect-square rounded-2xl ring-1 transition ${active ? "ring-primary-glow" : "ring-white/10"}`}
-                      style={{ background: c, boxShadow: active ? `0 0 40px ${c}` : `0 0 18px ${c}80` }}
-                    >
+                      style={{ background: c, boxShadow: active ? `0 0 40px ${c}` : `0 0 18px ${c}80` }}>
                       <span className="absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/40 px-1 py-0.5 text-[10px] text-white/90 backdrop-blur">
                         {c}
                       </span>
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
-              {chosenColor && (
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Building today around <span className="text-foreground">{chosenColor}</span>. Let it be the loudest voice on the page.
-                </p>
-              )}
+
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Name the color, then name the feeling it holds..."
+                className="mt-5 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
             </div>
           )}
 
-          {/* DANCE: energy + ambient flow */}
           {cat.key === "dance" && (
             <div className="glass relative overflow-hidden rounded-3xl p-6">
-              {/* ambient flow visual */}
-              <motion.div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-                style={{
-                  background: `radial-gradient(60% 60% at 30% 40%, ${palette.colors[1]}55, transparent 60%),
-                              radial-gradient(50% 50% at 80% 70%, ${palette.colors[3]}55, transparent 60%)`,
-                }}
-                animate={{ scale: [1, 1.08, 1] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Movement energy</p>
-              <div className="mt-3 flex items-center gap-3">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Dance ritual</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Set the pace with your breath. Move with one careful impulse until the body quiets and the room listens.
+              </p>
+              <div className="mt-4 flex items-center gap-3">
                 <span className="text-xs text-muted-foreground">still</span>
-                <input type="range" min={1} max={5} value={energy}
-                  onChange={(e) => setEnergy(Number(e.target.value))}
-                  className="w-full accent-primary" />
+                <input type="range" min={1} max={5} value={energy} onChange={(e) => setEnergy(Number(e.target.value))} className="w-full accent-primary" />
                 <span className="text-xs text-muted-foreground">wild</span>
               </div>
-              <div className="mt-5 grid place-items-center">
-                <motion.div
-                  className="h-40 w-40 rounded-full"
-                  style={{
-                    background: `radial-gradient(circle, ${palette.colors[2]}, ${palette.colors[3]})`,
-                    filter: "blur(2px)",
-                  }}
-                  animate={{
-                    scale: [1, 1 + energy * 0.04, 1],
-                    rotate: [0, energy * 30, 0],
-                  }}
-                  transition={{ duration: 6 - energy * 0.6, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </div>
-              <p className="mt-4 text-center text-xs text-muted-foreground">
-                {energy <= 2 ? "Slow. Let gravity do the work." : energy === 3 ? "A steady pulse. Find one shape and stay with it." : "Push. Let the body lead."}
+              <p className="mt-4 text-sm text-muted-foreground">
+                {energy <= 2 ? "Soft and held." : energy === 3 ? "A steady, gentle pulse." : "Let the movement open."}
               </p>
-            </div>
-          )}
-
-          {/* WRITING: poetic immersive environment */}
-          {cat.key === "writing" && (
-            <div className="glass relative overflow-hidden rounded-3xl p-6">
-              <motion.div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-50"
-                style={{ background: `linear-gradient(180deg, ${palette.colors[0]}22, transparent 60%)` }}
-                animate={{ opacity: [0.3, 0.55, 0.3] }}
-                transition={{ duration: 8, repeat: Infinity }}
-              />
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">A page for you</p>
               <Textarea value={content} onChange={(e) => setContent(e.target.value)}
-                placeholder={`Begin slowly… write the line you almost wouldn't.`}
-                className="mt-3 min-h-[260px] resize-none rounded-2xl border-border/60 bg-background/30 font-display text-lg leading-relaxed tracking-wide backdrop-blur placeholder:italic placeholder:text-muted-foreground/70"
-              />
-              <p className="mt-2 text-right text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{content.trim().split(/\s+/).filter(Boolean).length} words</p>
+                placeholder="Name the gesture, the rhythm, or the emotion of the movement..."
+                className="mt-5 min-h-[140px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
             </div>
           )}
 
-          {/* MUSIC: simple notes panel */}
+          {cat.key === "writing" && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Writing ritual</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Let one quiet line arrive. The page is a place to hold the feeling without making it perform.
+              </p>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Write the first honest line you would whisper to yourself..."
+                className="mt-4 min-h-[220px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
           {cat.key === "music" && (
             <div className="glass rounded-3xl p-6">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Liner notes</p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Music ritual</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Listen first. Then name the sound, the memory, or the feeling it opens in you.
+              </p>
               <Textarea value={content} onChange={(e) => setContent(e.target.value)}
-                placeholder="Songs, lyrics, the shape of the sound…"
-                className="mt-3 min-h-[180px] resize-none rounded-2xl border-border/60 bg-background/40 backdrop-blur" />
+                placeholder="Describe the first sound you let the studio hold..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
             </div>
           )}
 
-          {/* Reflection + save */}
+          {cat.key === "film" && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Film studio</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Observe one moment as if it were a single scene. Give it a title, a tone, and a quiet first line.
+              </p>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Write the opening shot of this memory scene..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
+          {cat.key === "midnight-walks" && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Midnight walk</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Walk the night without hurry. Notice one detail that feels like a hidden poem.
+              </p>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Describe the lantern, the pavement, or the quiet sound that stayed with you..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
+          {cat.key === "memory-room" && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Memory room</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This room holds a quiet detail from your past. Let one remembered moment arrive without judgment.
+              </p>
+              <div className="mt-3 rounded-2xl bg-background/20 p-3 text-sm text-slate-200">
+                {memoryCue}
+              </div>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Recall a small moment and hold it here in words..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
+          {cat.key === "soundscape" && (
+            <div className="glass rounded-3xl p-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Soundscape</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Let the room become a layered sound field. Describe the three quietest sounds you can find.
+              </p>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)}
+                placeholder="Describe the soft, the present, and the echo..."
+                className="mt-4 min-h-[180px] rounded-2xl border-border/60 bg-background/30 backdrop-blur" />
+            </div>
+          )}
+
           <div className="glass rounded-3xl p-6">
             <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">A small reflection</p>
             <Textarea value={reflection} onChange={(e) => setReflection(e.target.value)}
-              placeholder="What did the act of doing this open in you?"
-              className="mt-3 min-h-[100px] resize-none rounded-2xl border-border/60 bg-background/40 backdrop-blur" />
+              placeholder="What did the ritual open in you?"
+              className="mt-3 min-h-[120px] rounded-2xl border-border/60 bg-background/40 backdrop-blur" />
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              {cat.key !== "photography" && (
-                <>
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => e.target.files?.[0] && onPhoto(e.target.files[0])} />
-                  <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                    <Camera className="mr-2 h-4 w-4" /> {photoUrl ? "Change photo" : "Add a photo"}
-                  </Button>
-                  {photoUrl && <img src={photoUrl} alt="upload" className="h-14 w-14 rounded-xl object-cover ring-1 ring-white/10" />}
-                </>
-              )}
+              <div className="text-xs text-muted-foreground">Saved to your emotional memories.</div>
               <div className="ml-auto">
                 <Button onClick={save}><Check className="mr-2 h-4 w-4" /> Save to memories</Button>
               </div>
@@ -474,7 +594,6 @@ function CategoryPage() {
         </section>
       )}
 
-      {/* Done */}
       {done && (
         <motion.section
           initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
@@ -483,7 +602,7 @@ function CategoryPage() {
           <div className="absolute inset-0 -z-10 opacity-90" style={{ background: cat.gradient }} />
           <Particles count={24} />
           <p className="text-xs uppercase tracking-[0.25em] text-primary-glow">Held</p>
-          <h2 className="mt-3 font-display text-3xl">Beautifully done.</h2>
+          <h2 className="mt-3 font-display text-3xl">Gently held.</h2>
           <p className="mt-2 text-sm italic text-muted-foreground">"{poetic}"</p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Button onClick={() => { setDone(false); setPrompt(pickPrompt(cat.key, crypto.randomUUID())); }}>Try another invitation</Button>
@@ -492,7 +611,6 @@ function CategoryPage() {
         </motion.section>
       )}
 
-      {/* Past in this studio */}
       {myCompleted.length > 0 && (
         <section className="mt-10">
           <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">From this studio</p>
@@ -503,7 +621,6 @@ function CategoryPage() {
                 transition={{ delay: i * 0.05 }}
                 className="glass overflow-hidden rounded-3xl"
               >
-                {c.photo_url && <img src={c.photo_url} alt="" className="h-36 w-full object-cover" />}
                 <div className="p-4">
                   <p className="text-xs text-muted-foreground">{new Date(c.completed_at).toLocaleDateString()}</p>
                   <p className="mt-1 line-clamp-2 text-sm">{c.prompt}</p>

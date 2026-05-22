@@ -17,13 +17,21 @@ function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard" });
+    if (!loading && user) {
+      supabase.from("profiles").select("onboarding_completed").eq("id", user.id).single().then(({ data }) => {
+        if (data?.onboarding_completed) {
+          navigate({ to: "/dashboard" });
+        } else {
+          navigate({ to: "/onboarding" });
+        }
+      });
+    }
   }, [loading, user, navigate]);
 
   return (
     <main className="relative min-h-screen overflow-hidden">
       <StarfieldBackground />
-      <div className="grid min-h-screen items-center gap-12 px-6 py-12 md:grid-cols-2 md:px-16">
+      <div className="relative z-10 grid min-h-screen items-center gap-12 px-6 py-12 md:grid-cols-2 md:px-16">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}
           className="hidden flex-col items-center gap-8 md:flex">
           <div className="animate-float-slow"><AICompanionOrb size={300} /></div>

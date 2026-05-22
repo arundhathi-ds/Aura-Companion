@@ -9,9 +9,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Music2, ExternalLink, RotateCcw, ChevronRight, Globe } from "lucide-react";
 import {
   INTENT_OPTIONS, WEATHER_OPTIONS, LANGUAGE_OPTIONS,
-  getDynamicSongs, getVibeHeadline,
+  getVibeHeadline, getDynamicSongs,
   type SongIntent, type WeatherVibe, type SongLanguage, type Song,
 } from "@/lib/spotify/song-recommendations";
+import { getRecommendations } from '@/lib/spotify/recommendation-engine';
+import { findCategoryByKey, pickCategoryForIntentWeather } from '@/lib/spotify/categories';
+import { useAtmosphere } from '@/components/atmosphere/AtmosphereProvider';
 
 type Step = "intent" | "weather" | "language" | "results";
 
@@ -68,14 +71,36 @@ export function SmartMusicPlayer() {
   const [language, setLanguage] = useState<SongLanguage | null>(null);
   const [open, setOpen] = useState(false);
   const [songs, setSongs] = useState<Song[]>([]);
+  const { setAtmosphere } = useAtmosphere();
 
   const reset = () => { setStep("intent"); setIntent(null); setWeather(null); setLanguage(null); };
 
   const generateResults = (l: SongLanguage) => {
     if (intent && weather) {
-      const results = getDynamicSongs(intent, l, weather);
-      setSongs(results);
-      setStep("results");
+      setSongs([]);
+      (async () => {
+        try {
+          const res = await getRecommendations({ intent, weather, language: l, limit: 12 });
+          const categoryKey = pickCategoryForIntentWeather(intent, weather as string);
+          const profile = findCategoryByKey(categoryKey);
+          // set global atmosphere for immersion
+          try { setAtmosphere(categoryKey); } catch {}
+          const mapped: Song[] = (res?.tracks ?? []).map((t: any) => ({
+            title: t.name,
+            artist: (t.artists ?? []).join(', '),
+            searchUrl: t.spotifyUrl,
+            color: profile?.visual?.tint ?? 'oklch(0.75 0.2 140)',
+            language: l,
+          }));
+          setSongs(mapped);
+          setStep('results');
+        } catch (e) {
+          // fallback to existing pool if server call fails
+          const results = getDynamicSongs(intent, l, weather);
+          setSongs(results);
+          setStep('results');
+        }
+      })();
     }
   };
 
